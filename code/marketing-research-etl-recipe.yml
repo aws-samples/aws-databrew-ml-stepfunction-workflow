@@ -1,0 +1,61 @@
+- Action:
+    Operation: CATEGORICAL_MAPPING
+    Parameters:
+      categoryMap: '{"no":"0","yes":"1"}'
+      deleteOtherRows: 'false'
+      mapType: NUMERIC
+      mappingOption: ALL_VALUES
+      sourceColumn: 'y'
+      targetColumn: y_output
+- Action:
+    Operation: ONE_HOT_ENCODING
+    Parameters:
+      sourceColumn: marital
+- Action:
+    Operation: BINARIZATION
+    Parameters:
+      flip: 'false'
+      sourceColumn: duration
+      targetColumn: long_call
+      threshold: '300'
+- Action:
+    Operation: BUCKETIZATION
+    Parameters:
+      bucketNames: '["1","2","3"]'
+      sourceColumn: age
+      splits: '["-Infinity","22","42.394","Infinity"]'
+      targetColumn: age_binning
+  ConditionExpressions:
+    - Condition: IS
+      Value: '["no"]'
+      TargetColumn: loan
+- Action:
+    Operation: REMOVE_VALUES
+    Parameters:
+      sourceColumn: default
+  ConditionExpressions:
+    - Condition: IS
+      Value: '["yes"]'
+      TargetColumn: default
+- Action:
+    Operation: FLAG_COLUMN_FROM_PATTERN
+    Parameters:
+      falseString: '0'
+      pattern: 'yes'
+      sourceColumn: housing
+      targetColumn: house_without_loan
+      trueString: '1'
+  ConditionExpressions:
+    - Condition: IS
+      Value: '["no"]'
+      TargetColumn: loan
+- Action:
+    Operation: DELETE
+    Parameters:
+      sourceColumns: >-
+        ["age","job","marital","education","default","housing","loan","contact","month","day_of_week","campaign","pdays","previous","poutcome","emp.var.rate","cons.price.idx","cons.conf.idx","euribor3m","nr.employed","y"]
+- Action:
+    Operation: MOVE_TO_START
+    Parameters:
+      sourceColumn: y_output
+      targetIndex: NaN
