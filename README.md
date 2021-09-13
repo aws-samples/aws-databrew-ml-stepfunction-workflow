@@ -12,7 +12,7 @@ Regarding orchestration or workflow management, AWS provides AWS Step Functions,
 As part of this repository, we walk through a solution where we use DataBrew for visual data preparation and use Jupyterlab code to call databrew artifacts and create AWS step functions to orchestrate Sagemaker training jobs.
 
 ## Step function workflow
-This is an overview of the architecture described above: 
+This is an overview of the workflow described above: 
 
 ![step_function_workflow](img/step_function_workflow.png)
 
@@ -38,9 +38,9 @@ You can find more information about Databrew and step function in below links
 * [AWS Step Functions Data Science SDK](https://aws-step-functions-data-science-sdk.readthedocs.io)
 ​
 
-This solution is implemented in Jupyter notebook - here
+This solution is implemented in Jupyter notebook [sagemaker_databrew_ml_workflow_blog.ipynb](notebooks/sagemaker_databrew_ml_workflow_blog.ipynb)
 
-All required roles/permission can be deployed using cloudformation template - here
+All required roles/permission can be deployed using cloudformation [template](cloudformation/step-function-execution-role.yaml)
 
 we will use the SDK to create steps that Orchestrate AWS Glue Databrew receipe jobs, encorporate this data into the training of a machine learning model, deploy the model to a SageMaker endpoint, link these steps together to create a workflow, and then execute the workflow in AWS Step Functions.
 
