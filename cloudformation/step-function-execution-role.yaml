@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Custom resource to configure all required permission for stepfunction execution on sagemaker'
+Parameters:
+  DatabrewGlueJobName:
+      Type: String
+      Description: Name of your Databrew receipe job.  
+  SageMakerExecutionRole:
+      Type: CommaDelimitedList
+      Description: Sagemaker execution role - Refer SM Studio console for role name.   
+  S3Bucket:
+      Type: String
+      Description: Name of S3 bucket with source data and to save transformed training data.
+Resources:
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerReadOnly'  
+  StepFnExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaRole'              
+  WorkflowExecutionPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: iamPassRoletoSagemaker
+            Effect: Allow
+            Action: 'iam:PassRole'
+            Resource: 
+              - !Sub
+                  - arn:aws:iam::${AWS::AccountId}:role/service-role/${Servicerole}
+                  - { Servicerole: !Select [0, Ref: SageMakerExecutionRole] }
+            Condition:
+              StringEquals:
+                'iam:PassedToService': sagemaker.amazonaws.com        
+          - Sid: SageStepfunctionAction
+            Effect: Allow
+            Action:
+              - 'sagemaker:CreateModel'
+              - 'sagemaker:DeleteEndpointConfig'
+              - 'sagemaker:DescribeTrainingJob'
+              - 'events:DescribeRule'
+              - 'sagemaker:CreateEndpoint'
+              - 'lambda:InvokeFunction'
+              - 'events:PutRule'
+              - 'sagemaker:StopTrainingJob'
+              - 'sagemaker:CreateTrainingJob'
+              - 'sagemaker:UpdateEndpoint'
+              - 'events:PutTargets'
+              - 'sagemaker:CreateEndpointConfig'
+              - 'databrew:StartJobRun'
+              - 'databrew:ListJobRuns'
+              - 'sagemaker:DeleteEndpoint'
+              - 'databrew:StopJobRun'
+              - "glue:StartJobRun"
+              - "glue:GetJobRun"
+              - "glue:BatchStopJobRun"
+              - "glue:GetJobRuns"
+            Resource:
+              - 'arn:aws:sagemaker:*:*:*'
+              - 'arn:aws:events:*:*:rule/StepFunctionsGetEventsForSageMakerTrainingJobsRule'
+              - !Sub
+                - arn:aws:databrew:*:*:job/${JobName}
+                - { JobName: !Ref DatabrewGlueJobName }
+              - 'arn:aws:lambda:*:*:function:sage_query_training_status*'
+              - 'arn:aws:glue:*:*:job/job-marketing-research-etl*'
+      Roles: 
+        -
+          Ref: StepFnExecutionRole
+    DependsOn: StepFnExecutionRole
+  GlueDataBrewRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "databrew.amazonaws.com"
+                - "glue.amazonaws.com"
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AwsGlueDataBrewFullAccessPolicy'
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+  DatabrewS3AccessPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ListObjectsInBucket
+            Effect: Allow
+            Action:
+              - 's3:ListBucket'
+            Resource:
+              - !Sub
+                    - arn:aws:s3:::${bucketname}
+                    - { bucketname: !Ref S3Bucket }
+          - Sid: AllObjectActions
+            Effect: Allow
+            Action: 's3:*Object'
+            Resource:
+              - !Sub
+                    - arn:aws:s3:::${bucketname}/*
+                    - { bucketname: !Ref S3Bucket }
+      Roles: 
+        -
+          Ref: GlueDataBrewRole
+    DependsOn: GlueDataBrewRole
+  SagemakerNotebookPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AWSStepFunctionsFullAccess
+            Effect: Allow
+            Action:
+              - 'states:*'
+            Resource: '*'
+          - Sid: LambdaWriteAccess
+            Effect: Allow
+            Action:
+              - 'lambda:CreateFunction'
+              - 'lambda:PublishLayerVersion'
+              - 'lambda:DeleteProvisionedConcurrencyConfig'
+              - 'lambda:InvokeAsync'
+              - 'lambda:CreateEventSourceMapping'
+              - 'lambda:PutFunctionConcurrency'
+              - 'lambda:DeleteCodeSigningConfig'
+              - 'iam:SetSecurityTokenServicePreferences'
+              - 'iam:CreateAccountAlias'
+              - 'lambda:DeleteLayerVersion'
+              - 'lambda:PutFunctionEventInvokeConfig'
+              - 'lambda:DeleteFunctionEventInvokeConfig'
+              - 'lambda:DeleteFunction'
+              - 'iam:DeleteAccountAlias'
+              - 'lambda:CreateCodeSigningConfig'
+              - 'lambda:PutFunctionCodeSigningConfig'
+              - 'lambda:UpdateFunctionEventInvokeConfig'
+              - 'lambda:DeleteFunctionCodeSigningConfig'
+              - 'lambda:UpdateEventSourceMapping'
+              - 'lambda:UpdateFunctionCodeSigningConfig'
+              - 'lambda:InvokeFunction'
+              - 'lambda:UpdateFunctionConfiguration'
+              - 'lambda:UpdateAlias'
+              - 'lambda:UpdateCodeSigningConfig'
+              - 'lambda:UpdateFunctionCode'
+              - 'iam:UpdateAccountPasswordPolicy'
+              - 'lambda:PutProvisionedConcurrencyConfig'
+              - 'lambda:DeleteAlias'
+              - 'lambda:PublishVersion'
+              - 'lambda:DeleteFunctionConcurrency'
+              - 'lambda:DeleteEventSourceMapping'
+              - 'lambda:CreateAlias'
+              - 'glue:*'
+            Resource: '*'
+          - Sid: IAMPassRoleTrainingStatusLambda
+            Effect: Allow
+            Action:
+              - 'iam:PassRole'
+              - 's3:ListBucket'
+            Resource:
+              - !Sub
+                  - arn:aws:iam::${AWS::AccountId}:role/${LambdaRole}
+                  - { LambdaRole: !Ref LambdaExecutionRole }
+              - !Sub
+                  - arn:aws:iam::${AWS::AccountId}:role/${GlueRole}
+                  - { GlueRole: !Ref GlueDataBrewRole }
+              - !Sub
+                  - arn:aws:iam::${AWS::AccountId}:role/${Stepfnrole}
+                  - { Stepfnrole: !Ref StepFnExecutionRole }                  
+          - Sid: S3RWAccess
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub
+                    - arn:aws:s3:::${bucketname}
+                    - { bucketname: !Ref S3Bucket }            
+      Roles: !Ref SageMakerExecutionRole
+    DependsOn: [LambdaExecutionRole,GlueDataBrewRole,StepFnExecutionRole]
+Outputs:
+  SageMakerExecutionRole:
+    Description: Sagemaker execution role
+    Value: !Select [0, !Ref SageMakerExecutionRole]
+  LambdaRole:
+    Description: Lambda role to query status
+    Value: !Ref LambdaExecutionRole
+  GlueDataBrewRole:
+    Description: Glue Databrew role to create recipes / schedule glue etl job
+    Value: !Ref GlueDataBrewRole
+  StepFnExecutionRole:
+    Description: Role assumed by step function to execute workflow from studio
+    Value: !Ref StepFnExecutionRole
