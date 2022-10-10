@@ -1,5 +1,5 @@
 
-# Sagemaker Model training workflow with AWS Glue Databrew reciepe and AWS Step Function SDK.
+# Sagemaker Model training workflow with AWS Glue Databrew recipes and AWS Step Function SDK.
 
 # Introduction
 
