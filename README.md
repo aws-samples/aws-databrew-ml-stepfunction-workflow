@@ -26,7 +26,7 @@ https://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
 ## Solution Steps
 
-First we will create databrew project and receipes to transform dataset then create machine learning model training workflow using Step function. 
+First we will create databrew project and recipes to transform dataset then create machine learning model training workflow using Step function. 
 
 You can find more information about Databrew and step function in below links
 
@@ -42,7 +42,7 @@ This solution is implemented in Jupyter notebook [sagemaker_databrew_ml_workflow
 
 All required roles/permission can be deployed using cloudformation [template](cloudformation/step-function-execution-role.yaml)
 
-we will use the SDK to create steps that Orchestrate AWS Glue Databrew receipe jobs, encorporate this data into the training of a machine learning model, deploy the model to a SageMaker endpoint, link these steps together to create a workflow, and then execute the workflow in AWS Step Functions.
+we will use the SDK to create steps that Orchestrate AWS Glue Databrew recipe jobs, encorporate this data into the training of a machine learning model, deploy the model to a SageMaker endpoint, link these steps together to create a workflow, and then execute the workflow in AWS Step Functions.
 
  
 ## License Summary
